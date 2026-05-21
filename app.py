@@ -7,7 +7,6 @@ import xgboost as xgb
 import shap
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-import base64
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -232,91 +231,6 @@ FEATURE_LABELS = {
 }
 
 # ─────────────────────────────────────────────
-#  COLON SVG — rendered as base64 image
-#  (Streamlit strips raw SVG from st.markdown)
-# ─────────────────────────────────────────────
-COLON_SVG_RAW = """<svg width="220" height="200" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background glow -->
-  <radialGradient id="bg" cx="50%" cy="50%" r="50%">
-    <stop offset="0%" stop-color="#1a4a8a" stop-opacity="0.4"/>
-    <stop offset="100%" stop-color="#070e1c" stop-opacity="0"/>
-  </radialGradient>
-  <circle cx="110" cy="100" r="95" fill="url(#bg)"/>
-
-  <!-- Colon wall (outer thick stroke) -->
-  <!-- Ascending colon right side -->
-  <path d="M138 168 Q158 158 163 132 Q168 106 160 78 Q152 56 136 46"
-        stroke="#1e4d7a" stroke-width="22" fill="none"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Transverse colon top -->
-  <path d="M136 46 Q110 30 84 46"
-        stroke="#1e4d7a" stroke-width="22" fill="none"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Descending colon left -->
-  <path d="M84 46 Q68 56 60 78 Q52 106 57 132 Q62 158 82 168"
-        stroke="#1e4d7a" stroke-width="22" fill="none"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Sigmoid bottom -->
-  <path d="M82 168 Q94 180 110 177 Q126 174 138 168"
-        stroke="#1e4d7a" stroke-width="22" fill="none"
-        stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- Colon inner highlight (teal/cyan) -->
-  <path d="M138 168 Q158 158 163 132 Q168 106 160 78 Q152 56 136 46"
-        stroke="#38bdf8" stroke-width="10" fill="none"
-        stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
-  <path d="M136 46 Q110 30 84 46"
-        stroke="#38bdf8" stroke-width="10" fill="none"
-        stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
-  <path d="M84 46 Q68 56 60 78 Q52 106 57 132 Q62 158 82 168"
-        stroke="#38bdf8" stroke-width="10" fill="none"
-        stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
-  <path d="M82 168 Q94 180 110 177 Q126 174 138 168"
-        stroke="#38bdf8" stroke-width="10" fill="none"
-        stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
-
-  <!-- Haustra folds (dash pattern on top of inner) -->
-  <path d="M138 168 Q158 158 163 132 Q168 106 160 78 Q152 56 136 46"
-        stroke="#67e8f9" stroke-width="3" fill="none" stroke-dasharray="2 16"
-        stroke-linecap="round" opacity="0.6"/>
-  <path d="M84 46 Q68 56 60 78 Q52 106 57 132 Q62 158 82 168"
-        stroke="#67e8f9" stroke-width="3" fill="none" stroke-dasharray="2 16"
-        stroke-linecap="round" opacity="0.6"/>
-  <path d="M136 46 Q110 30 84 46"
-        stroke="#67e8f9" stroke-width="3" fill="none" stroke-dasharray="2 12"
-        stroke-linecap="round" opacity="0.6"/>
-
-  <!-- Small intestine in center -->
-  <path d="M102 88 Q118 76 114 94 Q110 110 124 106 Q136 103 126 120 Q116 135 104 128 Q90 122 98 108"
-        stroke="#4ade80" stroke-width="5" fill="none"
-        stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
-
-  <!-- Polyp (red dot) on ascending colon -->
-  <circle cx="162" cy="112" r="9" fill="#991b1b" opacity="0.9"/>
-  <circle cx="162" cy="112" r="5.5" fill="#ef4444"/>
-  <circle cx="160" cy="110" r="2" fill="#fca5a5" opacity="0.7"/>
-
-  <!-- Polyp label -->
-  <line x1="171" y1="112" x2="183" y2="108" stroke="#fca5a5" stroke-width="1.2"/>
-  <text x="184" y="107" fill="#fca5a5" font-size="9.5" font-family="sans-serif" font-weight="700">polyp</text>
-
-  <!-- Section labels -->
-  <text x="168" y="75" fill="#67e8f9" font-size="8" font-family="sans-serif" opacity="0.8">ascending</text>
-  <text x="88" y="22" fill="#67e8f9" font-size="8" font-family="sans-serif" opacity="0.8">transverse</text>
-  <text x="28" y="75" fill="#67e8f9" font-size="8" font-family="sans-serif" opacity="0.8">descending</text>
-  <text x="82" y="196" fill="#67e8f9" font-size="8" font-family="sans-serif" opacity="0.8">sigmoid</text>
-
-  <!-- Decorative sparkle dots -->
-  <circle cx="50" cy="50" r="2.5" fill="#38bdf8" opacity="0.4"/>
-  <circle cx="175" cy="155" r="3" fill="#38bdf8" opacity="0.3"/>
-  <circle cx="110" cy="18" r="2" fill="#ffffff" opacity="0.25"/>
-  <circle cx="45" cy="148" r="2" fill="#4ade80" opacity="0.4"/>
-</svg>"""
-
-svg_b64 = base64.b64encode(COLON_SVG_RAW.encode("utf-8")).decode("utf-8")
-COLON_IMG_TAG = f'<img src="data:image/svg+xml;base64,{svg_b64}" width="220" height="200" alt="Colorectal anatomy illustration"/>'
-
-# ─────────────────────────────────────────────
 #  TOP BAR
 # ─────────────────────────────────────────────
 st.markdown("""
@@ -329,14 +243,11 @@ st.markdown("""
 # ─────────────────────────────────────────────
 #  HERO
 # ─────────────────────────────────────────────
-st.markdown(f"""
+st.markdown("""
 <div class="hero">
-  <div class="hero-text">
-    <div class="hero-eyebrow">🔬 Clinical Decision Support · Academic Research Tool</div>
-    <h1>AI-Based Predictive Model for <em>Early Detection</em> of Colorectal Cancer Risk Factors</h1>
-    <p>Powered by XGBoost with SHAP explainability — assess individual CRC risk from clinical, genetic, and lifestyle parameters.</p>
-  </div>
-  <div class="hero-art">{COLON_IMG_TAG}</div>
+  <div class="hero-eyebrow">🔬 Clinical Decision Support · Academic Research Tool</div>
+  <h1>AI-Based Predictive Model for <em>Early Detection</em><br>of Colorectal Cancer Risk Factors</h1>
+  <p>Powered by XGBoost with SHAP explainability — assess individual CRC risk from clinical, genetic, and lifestyle parameters.</p>
 </div>
 """, unsafe_allow_html=True)
 
