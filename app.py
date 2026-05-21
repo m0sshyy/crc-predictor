@@ -1,127 +1,154 @@
-import streamlit as st
-import pandas as pd
-import pickle
-import numpy as np
-import xgboost as xgb
-
-# Set Page Config for the Blue Theme
-st.set_page_config(page_title="CRC Risk Predictor", layout="centered")
-
-# Custom CSS for the Blue Theme
-st.markdown("""
-    <style>
-    .main {
-        background-color: #f0f2f6;
-    }
-    .stButton>button {
-        background-color: #004a99;
-        color: white;
-        border-radius: 10px;
-        width: 100%;
-    }
-    h1, h2, h3 {
-        color: #004a99;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-# Load the saved model
-@st.cache_resource
-def load_model():
-    # Make sure this filename matches exactly what you uploaded to GitHub
-    with open('crc_xgboost_model.pkl', 'rb') as f:
-        return pickle.load(f)
-
-try:
-    model = load_model()
-except FileNotFoundError:
-    st.error("Model file not found. Please ensure 'crc_xgboost_model.pkl' is uploaded to GitHub.")
-    st.stop()
-
-st.title("AI-Based CRC Risk Factor Detection")
-st.write("Enter patient data below to predict Colorectal Cancer risk levels using the XGBoost model.")
-
-# Inputs
-st.header("Patient Data Input")
-col1, col2 = st.columns(2)
-
-with col1:
-    age = st.number_input("Age", min_value=18, max_value=100, value=50)
-    gender = st.selectbox("Gender", options=["Male", "Female"])
-    family_history = st.selectbox("Family History of CRC", options=["No", "Yes"])
-    smoking = st.selectbox("Smoking History", options=["No", "Yes"])
-    alcohol = st.selectbox("Alcohol Consumption", options=["No", "Yes"])
-
-with col2:
-    diabetes = st.selectbox("Diabetes Status", options=["No", "Yes"])
-    ibd = st.selectbox("Inflammatory Bowel Disease", options=["No", "Yes"])
-    genetic_mutation = st.selectbox("Genetic Mutation", options=["No", "Yes"])
-    obesity = st.selectbox("Obesity Level", options=["Normal", "Overweight", "Obese"])
-    diet_risk = st.selectbox("Diet Risk Level", options=["Low", "Moderate", "High"])
-    activity = st.selectbox("Physical Activity", options=["High", "Moderate", "Low"])
-
-screening = st.selectbox("Screening History", options=["Regular", "Irregular", "Never"])
-
-# Preprocessing logic
-if st.button("Predict Risk Level"):
-    # Encoding
-    gen_val = 1 if gender == "Male" else 0
-    fam_val = 1 if family_history == "Yes" else 0
-    smok_val = 1 if smoking == "Yes" else 0
-    alc_val = 1 if alcohol == "Yes" else 0
-    diab_val = 1 if diabetes == "Yes" else 0
-    ibd_val = 1 if ibd == "Yes" else 0
-    gene_val = 1 if genetic_mutation == "Yes" else 0
-    
-    obesity_map = {"Normal": 0, "Overweight": 1, "Obese": 2}
-    diet_map = {"Low": 0, "Moderate": 1, "High": 2}
-    activity_map = {"High": 0, "Moderate": 1, "Low": 2}
-
-    # Feature Engineering
-    genetic_age_interaction = gene_val * age
-    medical_score = ibd_val + diab_val
-    lifestyle_idx = smok_val + alc_val + diet_map[diet_risk] + obesity_map[obesity] + activity_map[activity]
-
-    # Build DataFrame
-    input_df = pd.DataFrame([{
-        'Age': age,
-        'Gender': gen_val,
-        'Family_History': fam_val,
-        'Smoking_History': smok_val,
-        'Alcohol_Consumption': alc_val,
-        'Diabetes': diab_val,
-        'Inflammatory_Bowel_Disease': ibd_val,
-        'Genetic_Mutation': gene_val,
-        'Obesity_Risk_Level': obesity_map[obesity],
-        'Diet_Risk_Level': diet_map[diet_risk],
-        'Physical_Inactivity_Risk': activity_map[activity],
-        'Screening_History_Irregular': 1 if screening == "Irregular" else 0,
-        'Screening_History_Never': 1 if screening == "Never" else 0,
-        'Screening_History_Regular': 1 if screening == "Regular" else 0,
-        'Genetic_Age_Interaction': genetic_age_interaction,
-        'Medical_Comorbidity_Score': medical_score,
-        'Lifestyle_Index': lifestyle_idx
-    }])
-
-    # Ensure column order matches training
-    # (The order above matches your "X_train.columns" from the notebook)
-
-    prediction = model.predict(input_df)[0]
-    probabilities = model.predict_proba(input_df)[0]
-    
-    classes = {0: "Low", 1: "Medium", 2: "High"}
-    result = classes[prediction]
-
-    st.markdown("---")
-    st.subheader(f"Results")
-    
-    if result == "High":
-        st.error(f"Predicted Risk: {result}")
-    elif result == "Medium":
-        st.warning(f"Predicted Risk: {result}")
-    else:
-        st.success(f"Predicted Risk: {result}")
-        
-    st.write(f"Confidence: {np.max(probabilities)*100:.2f}%")
-
-st.info("Note: This app is for research purposes and does not replace professional medical advice.")
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "ddcc50e2-66ed-4e69-a5f8-2c84170c58b6",
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import streamlit as st\n",
+    "import pandas as pd\n",
+    "import pickle\n",
+    "import numpy as np\n",
+    "\n",
+    "# Set Page Config for the Blue Theme\n",
+    "st.set_page_config(page_title=\"CRC Risk Predictor\", layout=\"centered\")\n",
+    "\n",
+    "# Custom CSS for the Blue Theme\n",
+    "st.markdown(\"\"\"\n",
+    "    <style>\n",
+    "    .main {\n",
+    "        background-color: #f0f2f6;\n",
+    "    }\n",
+    "    .stButton>button {\n",
+    "        background-color: #004a99;\n",
+    "        color: white;\n",
+    "        border-radius: 10px;\n",
+    "    }\n",
+    "    h1 {\n",
+    "        color: #004a99;\n",
+    "    }\n",
+    "    .stNumberInput, .stSelectbox {\n",
+    "        border: 1px solid #004a99;\n",
+    "    }\n",
+    "    </style>\n",
+    "    \"\"\", unsafe_allow_html=True)\n",
+    "\n",
+    "# Load the saved model\n",
+    "@st.cache_resource\n",
+    "def load_model():\n",
+    "    with open('crc_xgboost_model.pkl', 'rb') as f:\n",
+    "        return pickle.load(f)\n",
+    "\n",
+    "model = load_model()\n",
+    "\n",
+    "st.title(\"Colorectal Cancer Risk Factor Early Detection\")\n",
+    "st.write(\"This tool estimates CRC risk levels based on clinical and lifestyle factors.\")\n",
+    "\n",
+    "# Sidebar/Inputs\n",
+    "st.header(\"Patient Information\")\n",
+    "col1, col2 = st.columns(2)\n",
+    "\n",
+    "with col1:\n",
+    "    age = st.number_input(\"Age\", min_value=1, max_value=120, value=50)\n",
+    "    gender = st.selectbox(\"Gender\", options=[\"Male\", \"Female\"])\n",
+    "    family_history = st.selectbox(\"Family History of CRC\", options=[\"No\", \"Yes\"])\n",
+    "    smoking = st.selectbox(\"Smoking History\", options=[\"No\", \"Yes\"])\n",
+    "    alcohol = st.selectbox(\"Alcohol Consumption\", options=[\"No\", \"Yes\"])\n",
+    "\n",
+    "with col2:\n",
+    "    diabetes = st.selectbox(\"Diabetes Status\", options=[\"No\", \"Yes\"])\n",
+    "    ibd = st.selectbox(\"Inflammatory Bowel Disease\", options=[\"No\", \"Yes\"])\n",
+    "    genetic_mutation = st.selectbox(\"Genetic Mutation\", options=[\"No\", \"Yes\"])\n",
+    "    obesity = st.selectbox(\"Obesity BMI Level\", options=[\"Normal\", \"Overweight\", \"Obese\"])\n",
+    "    diet_risk = st.selectbox(\"Diet Risk Level\", options=[\"Low\", \"Moderate\", \"High\"])\n",
+    "    activity = st.selectbox(\"Physical Activity Level\", options=[\"High\", \"Moderate\", \"Low\"])\n",
+    "\n",
+    "screening = st.selectbox(\"Screening History\", options=[\"Regular\", \"Irregular\", \"Never\"])\n",
+    "\n",
+    "# Mapping inputs to model format\n",
+    "gender_val = 1 if gender == \"Male\" else 0\n",
+    "family_history_val = 1 if family_history == \"Yes\" else 0\n",
+    "smoking_val = 1 if smoking == \"Yes\" else 0\n",
+    "alcohol_val = 1 if alcohol == \"Yes\" else 0\n",
+    "diabetes_val = 1 if diabetes == \"Yes\" else 0\n",
+    "ibd_val = 1 if ibd == \"Yes\" else 0\n",
+    "genetic_val = 1 if genetic_mutation == \"Yes\" else 0\n",
+    "\n",
+    "obesity_map = {\"Normal\": 0, \"Overweight\": 1, \"Obese\": 2}\n",
+    "diet_map = {\"Low\": 0, \"Moderate\": 1, \"High\": 2}\n",
+    "activity_map = {\"High\": 0, \"Moderate\": 1, \"Low\": 2}\n",
+    "\n",
+    "# Feature Engineering (From your XGBoost logic)\n",
+    "genetic_age_interaction = genetic_val * age\n",
+    "medical_comorbidity_score = ibd_val + diabetes_val\n",
+    "lifestyle_index = smoking_val + alcohol_val + diet_map[diet_risk] + obesity_map[obesity] + activity_map[activity]\n",
+    "\n",
+    "# Prediction Logic\n",
+    "if st.button(\"Calculate Risk\"):\n",
+    "    # Prepare input dataframe\n",
+    "    input_data = {\n",
+    "        'Age': age,\n",
+    "        'Gender': gender_val,\n",
+    "        'Family_History': family_history_val,\n",
+    "        'Smoking_History': smoking_val,\n",
+    "        'Alcohol_Consumption': alcohol_val,\n",
+    "        'Diabetes': diabetes_val,\n",
+    "        'Inflammatory_Bowel_Disease': ibd_val,\n",
+    "        'Genetic_Mutation': genetic_val,\n",
+    "        'Obesity_Risk_Level': obesity_map[obesity],\n",
+    "        'Diet_Risk_Level': diet_map[diet_risk],\n",
+    "        'Physical_Inactivity_Risk': activity_map[activity],\n",
+    "        'Screening_History_Irregular': 1 if screening == \"Irregular\" else 0,\n",
+    "        'Screening_History_Never': 1 if screening == \"Never\" else 0,\n",
+    "        'Screening_History_Regular': 1 if screening == \"Regular\" else 0,\n",
+    "        'Genetic_Age_Interaction': genetic_age_interaction,\n",
+    "        'Medical_Comorbidity_Score': medical_comorbidity_score,\n",
+    "        'Lifestyle_Index': lifestyle_index\n",
+    "    }\n",
+    "    \n",
+    "    df_input = pd.DataFrame([input_data])\n",
+    "    \n",
+    "    # Predict\n",
+    "    pred = model.predict(df_input)[0]\n",
+    "    prob = model.predict_proba(df_input)[0]\n",
+    "    \n",
+    "    risk_labels = {0: \"Low\", 1: \"Medium\", 2: \"High\"}\n",
+    "    result = risk_labels[pred]\n",
+    "    \n",
+    "    # Display Result\n",
+    "    st.subheader(f\"Results:\")\n",
+    "    if result == \"High\":\n",
+    "        st.error(f\"Predicted Risk Level: {result} ({prob[2]*100:.2f}%)\")\n",
+    "    elif result == \"Medium\":\n",
+    "        st.warning(f\"Predicted Risk Level: {result} ({prob[1]*100:.2f}%)\")\n",
+    "    else:\n",
+    "        st.success(f\"Predicted Risk Level: {result} ({prob[0]*100:.2f}%)\")\n",
+    "\n",
+    "st.info(\"**Disclaimer:** This is an AI research tool intended for educational purposes only. It is not a substitute for professional medical diagnosis or clinical advice.\")"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.13.9"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
