@@ -453,14 +453,32 @@ if predict_btn:
     try:
         explainer   = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(input_df)
-        # For multi-class, shap_values is a list; pick the predicted class
+        pred_class  = int(prediction)
+ 
+        # Handle all possible shapes XGBoost can return:
+        # 1) list of arrays  → [n_classes] each (n_samples, n_features)
+        # 2) 3D ndarray      → (n_samples, n_features, n_classes)
+        # 3) 2D ndarray      → (n_samples, n_features)  binary / single output
         if isinstance(shap_values, list):
-            sv = shap_values[int(prediction)][0]
+            sv = np.array(shap_values[pred_class]).flatten()
         else:
-            sv = shap_values[0]
+            sv_arr = np.array(shap_values)
+            if sv_arr.ndim == 3:          # (samples, features, classes)
+                sv = sv_arr[0, :, pred_class]
+            elif sv_arr.ndim == 2:        # (samples, features)
+                sv = sv_arr[0]
+            else:
+                sv = sv_arr.flatten()
+ 
+        # Safety check – must be 1-D and match feature count
+        sv = np.array(sv).flatten()
+        if sv.shape[0] != len(FEATURE_COLS):
+            raise ValueError(f"SHAP shape mismatch: got {sv.shape[0]}, expected {len(FEATURE_COLS)}")
+ 
         shap_ok = True
     except Exception as e:
         shap_ok = False
+        shap_err = str(e)
  
     st.markdown("<hr>", unsafe_allow_html=True)
     st.markdown('<div class="section-title">Risk Assessment Result</div>', unsafe_allow_html=True)
@@ -591,7 +609,7 @@ if predict_btn:
             st.markdown('</div>', unsafe_allow_html=True)
  
     else:
-        st.warning("SHAP explanation could not be generated for this model. Ensure the model is a native XGBoost or scikit-learn compatible object.")
+        st.warning(f"SHAP explanation could not be generated. Error: {shap_err}")
  
     # ── Clinical Notes ──
     st.markdown("<br>", unsafe_allow_html=True)
@@ -650,4 +668,3 @@ if predict_btn:
       SHAP values represent feature contributions to the model's prediction and do not imply direct medical causality.
     </div>
     """, unsafe_allow_html=True)
- 
