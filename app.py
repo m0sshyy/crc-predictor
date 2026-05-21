@@ -551,15 +551,15 @@ if predict_btn:
                     fontsize=8, color='#c8d8e8',
                     fontfamily='monospace')
  
-        ax.axvline(0, color='rgba(255,255,255,0.15)', linewidth=0.8, linestyle='--')
+        ax.axvline(0, color=(1, 1, 1, 0.15), linewidth=0.8, linestyle='--')
         ax.set_xlabel('SHAP Value  (impact on predicted risk class)', color='#8da0b8',
                       fontsize=9, labelpad=10)
         ax.tick_params(axis='x', colors='#8da0b8', labelsize=8)
         ax.tick_params(axis='y', colors='#c8d8e8', labelsize=9)
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        ax.spines['bottom'].set_color('rgba(255,255,255,0.08)')
-        ax.spines['left'].set_color('rgba(255,255,255,0.08)')
+        ax.spines['bottom'].set_color((1, 1, 1, 0.08))
+        ax.spines['left'].set_color((1, 1, 1, 0.08))
  
         # Legend
         patch_risk = mpatches.Patch(color='#ff5050', label='↑ Increases risk')
