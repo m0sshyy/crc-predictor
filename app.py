@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import pickle
 import numpy as np
@@ -6,6 +7,7 @@ import xgboost as xgb
 import shap
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import base64
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -20,212 +22,177 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-#  GLOBAL CSS  (light theme)
+#  GLOBAL CSS  — dark theme
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body, [class*="css"] {
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    background-color: #f4f7fb;
-    color: #1a2540;
+    font-family: 'Sora', sans-serif;
+    background-color: #070e1c;
+    color: #e2e8f4;
 }
-
 .main .block-container {
-    padding: 1.5rem 2.5rem 4rem;
+    padding: 1.5rem 2.8rem 4rem;
     max-width: 1280px;
 }
-
-/* ── Hide Streamlit branding ── */
 #MainMenu, footer, header { visibility: hidden; }
 
-/* ── Top nav bar ── */
+/* ── Top bar ── */
 .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 0.9rem 1.6rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    display: flex; align-items: center; justify-content: space-between;
+    background: #0d1a30; border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 14px; padding: 0.85rem 1.6rem; margin-bottom: 1.5rem;
 }
-.topbar-brand {
-    display: flex; align-items: center; gap: 0.6rem;
-    font-weight: 800; font-size: 1.05rem; color: #1a2540;
-}
-.topbar-brand span { color: #1a6fd4; }
+.topbar-brand { font-weight: 800; font-size: 1.05rem; color: #e2e8f4; }
+.topbar-brand span { color: #38bdf8; }
 .topbar-tag {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem; letter-spacing: 0.12em;
-    background: #eef4ff; color: #1a6fd4;
-    border: 1px solid #c4d9f8;
-    border-radius: 20px; padding: 0.2rem 0.7rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.67rem;
+    letter-spacing: 0.12em; background: rgba(56,189,248,0.1);
+    color: #38bdf8; border: 1px solid rgba(56,189,248,0.25);
+    border-radius: 20px; padding: 0.2rem 0.75rem;
 }
 
 /* ── Hero ── */
 .hero {
-    background: linear-gradient(135deg, #1a3a6b 0%, #1a6fd4 55%, #0ea5a0 100%);
-    border-radius: 20px;
-    padding: 2.8rem 3rem;
-    margin-bottom: 1.8rem;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
+    background: linear-gradient(135deg, #0d2146 0%, #0c3060 45%, #083d3d 100%);
+    border: 1px solid rgba(56,189,248,0.15);
+    border-radius: 20px; padding: 2.8rem 3rem;
+    margin-bottom: 2rem; position: relative; overflow: hidden;
+    display: flex; align-items: center; gap: 2rem;
 }
-.hero-text { flex: 1; }
-.hero-eyebrow {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.68rem; letter-spacing: 0.2em;
-    color: rgba(255,255,255,0.7); text-transform: uppercase;
-    margin-bottom: 0.7rem;
-}
-.hero h1 {
-    font-size: 1.6rem; font-weight: 800; line-height: 1.3;
-    color: #ffffff; margin-bottom: 0.7rem;
-}
-.hero h1 em { font-style: normal; color: #7ee8df; }
-.hero p { font-size: 0.88rem; color: rgba(255,255,255,0.75); line-height: 1.7; max-width: 520px; }
-.hero-art { flex-shrink: 0; opacity: 0.95; }
 .hero::before {
-    content: ''; position: absolute;
-    top: -80px; right: 280px; width: 260px; height: 260px;
-    background: rgba(255,255,255,0.04); border-radius: 50%;
+    content: ''; position: absolute; top: -80px; right: 260px;
+    width: 280px; height: 280px;
+    background: radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%);
     pointer-events: none;
 }
+.hero-text { flex: 1; min-width: 0; }
+.hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.67rem;
+    letter-spacing: 0.2em; color: #38bdf8; text-transform: uppercase;
+    margin-bottom: 0.75rem;
+}
+.hero h1 {
+    font-size: 1.65rem; font-weight: 800; line-height: 1.3;
+    color: #ffffff; margin-bottom: 0.75rem;
+}
+.hero h1 em { font-style: normal; color: #67e8f9; }
+.hero p { font-size: 0.87rem; color: rgba(255,255,255,0.6); line-height: 1.75; max-width: 500px; }
+.hero-art { flex-shrink: 0; }
 
 /* ── Section label ── */
 .sec-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase;
-    color: #1a6fd4; font-weight: 600;
-    display: flex; align-items: center; gap: 0.5rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    letter-spacing: 0.18em; text-transform: uppercase; color: #38bdf8;
+    font-weight: 600; display: flex; align-items: center; gap: 0.5rem;
     margin-bottom: 1rem;
 }
 .sec-label::after {
     content: ''; flex: 1; height: 1px;
-    background: linear-gradient(to right, #c4d9f8, transparent);
+    background: linear-gradient(to right, rgba(56,189,248,0.3), transparent);
 }
 
-/* ── White cards ── */
-.wcard {
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 1.4rem 1.5rem;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.06);
-    margin-bottom: 1rem;
+/* ── Dark cards ── */
+.dcard {
+    background: #0d1a30; border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 1.4rem 1.5rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3); margin-bottom: 1rem;
 }
-.wcard-title {
-    font-size: 0.78rem; font-weight: 700;
-    color: #1a2540; text-transform: uppercase;
-    letter-spacing: 0.08em; margin-bottom: 1rem;
-    padding-bottom: 0.6rem;
-    border-bottom: 2px solid #eef4ff;
+.dcard-title {
+    font-size: 0.75rem; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 1rem; padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
-/* ── Streamlit input overrides for light theme ── */
+/* ── Streamlit widget overrides ── */
 div[data-testid="stNumberInput"] label,
 div[data-testid="stSelectbox"] label {
-    font-size: 0.8rem !important; font-weight: 600 !important;
-    color: #4a5568 !important;
+    font-size: 0.8rem !important; font-weight: 500 !important; color: #94a3b8 !important;
 }
 div[data-testid="stNumberInput"] input {
-    background: #f8faff !important;
-    border: 1.5px solid #dce8f8 !important;
-    border-radius: 9px !important;
-    color: #1a2540 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    background: #111f38 !important; border: 1.5px solid rgba(255,255,255,0.08) !important;
+    border-radius: 9px !important; color: #e2e8f4 !important;
+    font-family: 'Sora', sans-serif !important;
 }
 div[data-baseweb="select"] > div {
-    background: #f8faff !important;
-    border: 1.5px solid #dce8f8 !important;
+    background: #111f38 !important; border: 1.5px solid rgba(255,255,255,0.08) !important;
     border-radius: 9px !important;
 }
-div[data-baseweb="select"] span {
-    color: #1a2540 !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-}
+div[data-baseweb="select"] span { color: #e2e8f4 !important; }
 
 /* ── Predict button ── */
 div[data-testid="stButton"] > button {
-    background: linear-gradient(135deg, #1a6fd4, #0ea5a0) !important;
-    color: #ffffff !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    background: linear-gradient(135deg, #0ea5e9, #0891b2) !important;
+    color: #ffffff !important; font-family: 'Sora', sans-serif !important;
     font-weight: 700 !important; font-size: 0.95rem !important;
     border: none !important; border-radius: 12px !important;
     padding: 0.8rem 2rem !important; width: 100% !important;
-    letter-spacing: 0.03em;
-    box-shadow: 0 4px 16px rgba(26,111,212,0.3) !important;
-    transition: all 0.2s ease !important;
+    box-shadow: 0 4px 20px rgba(14,165,233,0.35) !important;
+    transition: all 0.2s !important;
 }
 div[data-testid="stButton"] > button:hover {
     transform: translateY(-2px) !important;
-    box-shadow: 0 8px 24px rgba(26,111,212,0.4) !important;
+    box-shadow: 0 8px 28px rgba(14,165,233,0.5) !important;
 }
 
-/* ── Risk result ── */
-.result-box {
-    border-radius: 16px; padding: 1.8rem;
-    text-align: center;
-}
-.result-high  { background: linear-gradient(135deg,#fff5f5,#ffe4e4); border: 2px solid #ffb3b3; }
-.result-moderate { background: linear-gradient(135deg,#fffbf0,#fff3cc); border: 2px solid #ffd966; }
-.result-low   { background: linear-gradient(135deg,#f0fff8,#d4f7ea); border: 2px solid #6eddb8; }
+/* ── Result boxes ── */
+.result-box { border-radius: 16px; padding: 1.8rem; text-align: center; }
+.result-high     { background: linear-gradient(135deg,#1c0a0a,#2d1010); border: 1.5px solid #7f1d1d; }
+.result-moderate { background: linear-gradient(135deg,#1c1507,#2d2010); border: 1.5px solid #78350f; }
+.result-low      { background: linear-gradient(135deg,#071c10,#0a2d1a); border: 1.5px solid #14532d; }
 .risk-badge {
-    display: inline-block; border-radius: 30px; padding: 0.3rem 1rem;
-    font-family: 'JetBrains Mono', monospace; font-size: 0.65rem;
+    display: inline-block; border-radius: 30px; padding: 0.25rem 0.9rem;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.62rem;
     letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.6rem;
 }
-.badge-high     { background:#ffb3b3; color:#8b0000; }
-.badge-moderate { background:#ffd966; color:#7a5000; }
-.badge-low      { background:#6eddb8; color:#00593a; }
-.risk-num {
-    font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 0.3rem;
-}
-.risk-num-high     { color: #c0392b; }
-.risk-num-moderate { color: #d4860a; }
-.risk-num-low      { color: #0a7a4e; }
-.risk-conf { font-size: 0.82rem; color: #6b7280; }
+.badge-high     { background: rgba(239,68,68,0.2);  color: #fca5a5; border: 1px solid #7f1d1d; }
+.badge-moderate { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid #78350f; }
+.badge-low      { background: rgba(34,197,94,0.2);  color: #86efac; border: 1px solid #14532d; }
+.risk-num { font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 0.3rem; }
+.risk-num-high     { color: #ef4444; }
+.risk-num-moderate { color: #f59e0b; }
+.risk-num-low      { color: #22c55e; }
+.risk-conf { font-size: 0.82rem; color: #64748b; }
 
 /* ── Prob bars ── */
 .prob-row { display:flex; align-items:center; gap:0.7rem; margin-bottom:0.55rem; }
-.prob-lbl { font-size:0.75rem; font-weight:600; color:#4a5568; width:68px; }
-.prob-track { flex:1; height:10px; background:#f0f4ff; border-radius:5px; overflow:hidden; }
+.prob-lbl { font-size:0.75rem; font-weight:600; color:#94a3b8; width:68px; }
+.prob-track { flex:1; height:9px; background:rgba(255,255,255,0.05); border-radius:5px; overflow:hidden; }
 .prob-fill  { height:100%; border-radius:5px; }
-.prob-pct   { font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:#6b7280; width:38px; text-align:right; }
+.prob-pct   { font-family:'JetBrains Mono',monospace; font-size:0.72rem; width:38px; text-align:right; }
 
-/* ── Pill tags ── */
+/* ── Pills ── */
 .pill { display:inline-block; border-radius:20px; padding:0.22rem 0.65rem;
         font-size:0.72rem; font-family:'JetBrains Mono',monospace; margin:0.18rem; }
-.pill-r { background:#fff0f0; border:1px solid #ffb3b3; color:#c0392b; }
-.pill-g { background:#f0fff8; border:1px solid #6eddb8; color:#0a7a4e; }
+.pill-r { background:rgba(239,68,68,0.12);  border:1px solid rgba(239,68,68,0.3);  color:#fca5a5; }
+.pill-g { background:rgba(34,197,94,0.10);  border:1px solid rgba(34,197,94,0.3);  color:#86efac; }
 
 /* ── SHAP badge ── */
 .shap-badge {
-    display:inline-block; background:#eef4ff; border:1px solid #c4d9f8;
+    display:inline-block; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25);
     border-radius:6px; padding:0.15rem 0.5rem;
     font-family:'JetBrains Mono',monospace; font-size:0.62rem;
-    color:#1a6fd4; letter-spacing:0.08em; margin-left:0.5rem;
+    color:#38bdf8; letter-spacing:0.08em; margin-left:0.5rem; vertical-align:middle;
+}
+
+/* ── Clinical card ── */
+.clin-card {
+    background:#0d1a30; border-left:4px solid #0ea5e9;
+    border-radius:0 12px 12px 0; padding:1.3rem 1.5rem;
 }
 
 /* ── Disclaimer ── */
 .disclaimer {
-    background:#fffbf0; border:1px solid #ffd966; border-radius:12px;
-    padding:1rem 1.2rem; font-size:0.78rem; color:#6b7280; line-height:1.6;
-    margin-top:2rem;
+    background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2);
+    border-radius:12px; padding:1rem 1.2rem;
+    font-size:0.78rem; color:#64748b; line-height:1.6; margin-top:2rem;
 }
-.disclaimer strong { color:#d4860a; }
-
-/* ── Clinical card ── */
-.clin-card {
-    background:#f8faff; border-left:4px solid #1a6fd4;
-    border-radius:0 12px 12px 0; padding:1.2rem 1.4rem;
-}
+.disclaimer strong { color: #f59e0b; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -251,18 +218,103 @@ FEATURE_COLS = [
     'Genetic_Age_Interaction', 'Medical_Comorbidity_Score', 'Lifestyle_Index'
 ]
 FEATURE_LABELS = {
-    'Age': 'Age', 'Gender': 'Gender', 'Family_History': 'Family History',
-    'Smoking_History': 'Smoking', 'Alcohol_Consumption': 'Alcohol Use',
-    'Diabetes': 'Diabetes', 'Inflammatory_Bowel_Disease': 'IBD',
-    'Genetic_Mutation': 'Genetic Mutation', 'Obesity_Risk_Level': 'Obesity Level',
-    'Diet_Risk_Level': 'Diet Risk', 'Physical_Inactivity_Risk': 'Physical Inactivity',
-    'Screening_History_Irregular': 'Irregular Screening',
-    'Screening_History_Never': 'Never Screened',
-    'Screening_History_Regular': 'Regular Screening',
-    'Genetic_Age_Interaction': 'Genetic × Age',
-    'Medical_Comorbidity_Score': 'Comorbidity Score',
-    'Lifestyle_Index': 'Lifestyle Index'
+    'Age':'Age','Gender':'Gender','Family_History':'Family History',
+    'Smoking_History':'Smoking','Alcohol_Consumption':'Alcohol Use',
+    'Diabetes':'Diabetes','Inflammatory_Bowel_Disease':'IBD',
+    'Genetic_Mutation':'Genetic Mutation','Obesity_Risk_Level':'Obesity Level',
+    'Diet_Risk_Level':'Diet Risk','Physical_Inactivity_Risk':'Physical Inactivity',
+    'Screening_History_Irregular':'Irregular Screening',
+    'Screening_History_Never':'Never Screened',
+    'Screening_History_Regular':'Regular Screening',
+    'Genetic_Age_Interaction':'Genetic × Age',
+    'Medical_Comorbidity_Score':'Comorbidity Score',
+    'Lifestyle_Index':'Lifestyle Index'
 }
+
+# ─────────────────────────────────────────────
+#  COLON SVG — rendered as base64 image
+#  (Streamlit strips raw SVG from st.markdown)
+# ─────────────────────────────────────────────
+COLON_SVG_RAW = """<svg width="220" height="200" viewBox="0 0 220 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background glow -->
+  <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+    <stop offset="0%" stop-color="#1a4a8a" stop-opacity="0.4"/>
+    <stop offset="100%" stop-color="#070e1c" stop-opacity="0"/>
+  </radialGradient>
+  <circle cx="110" cy="100" r="95" fill="url(#bg)"/>
+
+  <!-- Colon wall (outer thick stroke) -->
+  <!-- Ascending colon right side -->
+  <path d="M138 168 Q158 158 163 132 Q168 106 160 78 Q152 56 136 46"
+        stroke="#1e4d7a" stroke-width="22" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Transverse colon top -->
+  <path d="M136 46 Q110 30 84 46"
+        stroke="#1e4d7a" stroke-width="22" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Descending colon left -->
+  <path d="M84 46 Q68 56 60 78 Q52 106 57 132 Q62 158 82 168"
+        stroke="#1e4d7a" stroke-width="22" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Sigmoid bottom -->
+  <path d="M82 168 Q94 180 110 177 Q126 174 138 168"
+        stroke="#1e4d7a" stroke-width="22" fill="none"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Colon inner highlight (teal/cyan) -->
+  <path d="M138 168 Q158 158 163 132 Q168 106 160 78 Q152 56 136 46"
+        stroke="#38bdf8" stroke-width="10" fill="none"
+        stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  <path d="M136 46 Q110 30 84 46"
+        stroke="#38bdf8" stroke-width="10" fill="none"
+        stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  <path d="M84 46 Q68 56 60 78 Q52 106 57 132 Q62 158 82 168"
+        stroke="#38bdf8" stroke-width="10" fill="none"
+        stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  <path d="M82 168 Q94 180 110 177 Q126 174 138 168"
+        stroke="#38bdf8" stroke-width="10" fill="none"
+        stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+
+  <!-- Haustra folds (dash pattern on top of inner) -->
+  <path d="M138 168 Q158 158 163 132 Q168 106 160 78 Q152 56 136 46"
+        stroke="#67e8f9" stroke-width="3" fill="none" stroke-dasharray="2 16"
+        stroke-linecap="round" opacity="0.6"/>
+  <path d="M84 46 Q68 56 60 78 Q52 106 57 132 Q62 158 82 168"
+        stroke="#67e8f9" stroke-width="3" fill="none" stroke-dasharray="2 16"
+        stroke-linecap="round" opacity="0.6"/>
+  <path d="M136 46 Q110 30 84 46"
+        stroke="#67e8f9" stroke-width="3" fill="none" stroke-dasharray="2 12"
+        stroke-linecap="round" opacity="0.6"/>
+
+  <!-- Small intestine in center -->
+  <path d="M102 88 Q118 76 114 94 Q110 110 124 106 Q136 103 126 120 Q116 135 104 128 Q90 122 98 108"
+        stroke="#4ade80" stroke-width="5" fill="none"
+        stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+
+  <!-- Polyp (red dot) on ascending colon -->
+  <circle cx="162" cy="112" r="9" fill="#991b1b" opacity="0.9"/>
+  <circle cx="162" cy="112" r="5.5" fill="#ef4444"/>
+  <circle cx="160" cy="110" r="2" fill="#fca5a5" opacity="0.7"/>
+
+  <!-- Polyp label -->
+  <line x1="171" y1="112" x2="183" y2="108" stroke="#fca5a5" stroke-width="1.2"/>
+  <text x="184" y="107" fill="#fca5a5" font-size="9.5" font-family="sans-serif" font-weight="700">polyp</text>
+
+  <!-- Section labels -->
+  <text x="168" y="75" fill="#67e8f9" font-size="8" font-family="sans-serif" opacity="0.8">ascending</text>
+  <text x="88" y="22" fill="#67e8f9" font-size="8" font-family="sans-serif" opacity="0.8">transverse</text>
+  <text x="28" y="75" fill="#67e8f9" font-size="8" font-family="sans-serif" opacity="0.8">descending</text>
+  <text x="82" y="196" fill="#67e8f9" font-size="8" font-family="sans-serif" opacity="0.8">sigmoid</text>
+
+  <!-- Decorative sparkle dots -->
+  <circle cx="50" cy="50" r="2.5" fill="#38bdf8" opacity="0.4"/>
+  <circle cx="175" cy="155" r="3" fill="#38bdf8" opacity="0.3"/>
+  <circle cx="110" cy="18" r="2" fill="#ffffff" opacity="0.25"/>
+  <circle cx="45" cy="148" r="2" fill="#4ade80" opacity="0.4"/>
+</svg>"""
+
+svg_b64 = base64.b64encode(COLON_SVG_RAW.encode("utf-8")).decode("utf-8")
+COLON_IMG_TAG = f'<img src="data:image/svg+xml;base64,{svg_b64}" width="220" height="200" alt="Colorectal anatomy illustration"/>'
 
 # ─────────────────────────────────────────────
 #  TOP BAR
@@ -275,90 +327,43 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-#  HERO  (with inline SVG colon illustration)
+#  HERO
 # ─────────────────────────────────────────────
-COLON_SVG = """
-<svg width="210" height="190" viewBox="0 0 210 190" xmlns="http://www.w3.org/2000/svg">
-  <!-- Glow background circle -->
-  <circle cx="105" cy="95" r="85" fill="rgba(255,255,255,0.07)"/>
-
-  <!-- Large intestine / colon shape – simplified cartoon -->
-  <!-- Ascending colon (right) -->
-  <path d="M130 160 Q145 155 150 130 Q155 105 148 80 Q142 60 128 52"
-        stroke="#7ee8df" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Transverse colon (top) -->
-  <path d="M128 52 Q105 38 82 52"
-        stroke="#7ee8df" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Descending colon (left) -->
-  <path d="M82 52 Q68 60 62 80 Q55 105 60 130 Q65 155 80 160"
-        stroke="#7ee8df" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <!-- Sigmoid / bottom -->
-  <path d="M80 160 Q90 172 105 168 Q120 165 130 160"
-        stroke="#7ee8df" stroke-width="18" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-
-  <!-- Haustra folds (decorative bumps) -->
-  <path d="M130 160 Q145 155 150 130 Q155 105 148 80 Q142 60 128 52"
-        stroke="rgba(255,255,255,0.18)" stroke-width="5" fill="none"
-        stroke-dasharray="1 18" stroke-linecap="round"/>
-  <path d="M82 52 Q68 60 62 80 Q55 105 60 130 Q65 155 80 160"
-        stroke="rgba(255,255,255,0.18)" stroke-width="5" fill="none"
-        stroke-dasharray="1 18" stroke-linecap="round"/>
-
-  <!-- Small intestine squiggle (center) -->
-  <path d="M100 85 Q112 75 108 90 Q104 105 116 100 Q126 97 118 112 Q110 125 100 118 Q88 112 96 100"
-        stroke="rgba(255,255,255,0.35)" stroke-width="6" fill="none" stroke-linecap="round"/>
-
-  <!-- Polyp highlight dot -->
-  <circle cx="148" cy="108" r="7" fill="#ff8c8c" opacity="0.9"/>
-  <circle cx="148" cy="108" r="4" fill="#ff4f4f"/>
-
-  <!-- Label -->
-  <text x="158" y="112" fill="#ffb3b3" font-size="9" font-family="sans-serif" font-weight="600">polyp</text>
-  <line x1="155" y1="108" x2="162" y2="108" stroke="#ff8c8c" stroke-width="1"/>
-
-  <!-- Decorative dots -->
-  <circle cx="55" cy="62" r="3" fill="rgba(126,232,223,0.4)"/>
-  <circle cx="160" cy="150" r="4" fill="rgba(126,232,223,0.3)"/>
-  <circle cx="105" cy="35" r="2.5" fill="rgba(255,255,255,0.3)"/>
-</svg>
-"""
-
 st.markdown(f"""
 <div class="hero">
   <div class="hero-text">
     <div class="hero-eyebrow">🔬 Clinical Decision Support · Academic Research Tool</div>
     <h1>AI-Based Predictive Model for <em>Early Detection</em> of Colorectal Cancer Risk Factors</h1>
-    <p>Powered by XGBoost machine learning with SHAP explainability — assess individual CRC risk from clinical, genetic, and lifestyle parameters.</p>
+    <p>Powered by XGBoost with SHAP explainability — assess individual CRC risk from clinical, genetic, and lifestyle parameters.</p>
   </div>
-  <div class="hero-art">{COLON_SVG}</div>
+  <div class="hero-art">{COLON_IMG_TAG}</div>
 </div>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-#  INPUT FORM  — using native Streamlit widgets
-#  (no HTML div wrapping widgets — that breaks layout)
+#  INPUT FORM
 # ─────────────────────────────────────────────
 st.markdown('<div class="sec-label">Patient Data Input</div>', unsafe_allow_html=True)
 
 col_a, col_b, col_c = st.columns(3)
 
 with col_a:
-    st.markdown('<div class="wcard"><div class="wcard-title">🧍 Demographics</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dcard"><div class="dcard-title">🧍 Demographics</div>', unsafe_allow_html=True)
     age       = st.number_input("Age (years)", min_value=18, max_value=100, value=50)
     gender    = st.selectbox("Gender", ["Male", "Female"])
     screening = st.selectbox("Screening History", ["Regular", "Irregular", "Never"])
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_b:
-    st.markdown('<div class="wcard"><div class="wcard-title">🧬 Clinical & Genetic</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dcard"><div class="dcard-title">🧬 Clinical & Genetic</div>', unsafe_allow_html=True)
     family_history   = st.selectbox("Family History of CRC", ["No", "Yes"])
-    genetic_mutation = st.selectbox("Genetic Mutation (MLH1/BRCA)", ["No", "Yes"])
+    genetic_mutation = st.selectbox("Genetic Mutation (MLH1 / BRCA)", ["No", "Yes"])
     diabetes         = st.selectbox("Diabetes", ["No", "Yes"])
     ibd              = st.selectbox("Inflammatory Bowel Disease (IBD)", ["No", "Yes"])
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col_c:
-    st.markdown('<div class="wcard"><div class="wcard-title">🥗 Lifestyle Factors</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dcard"><div class="dcard-title">🥗 Lifestyle Factors</div>', unsafe_allow_html=True)
     smoking   = st.selectbox("Smoking History", ["No", "Yes"])
     alcohol   = st.selectbox("Alcohol Consumption", ["No", "Yes"])
     obesity   = st.selectbox("Obesity Level", ["Normal", "Overweight", "Obese"])
@@ -381,31 +386,31 @@ if predict_btn:
     ibd_val  = 1 if ibd == "Yes" else 0
     gene_val = 1 if genetic_mutation == "Yes" else 0
 
-    obesity_map  = {"Normal": 0, "Overweight": 1, "Obese": 2}
-    diet_map     = {"Low": 0, "Moderate": 1, "High": 2}
-    activity_map = {"High": 0, "Moderate": 1, "Low": 2}
+    obesity_map  = {"Normal":0,"Overweight":1,"Obese":2}
+    diet_map     = {"Low":0,"Moderate":1,"High":2}
+    activity_map = {"High":0,"Moderate":1,"Low":2}
 
     genetic_age_interaction = gene_val * age
-    medical_score  = ibd_val + diab_val
-    lifestyle_idx  = smok_val + alc_val + diet_map[diet_risk] + obesity_map[obesity] + activity_map[activity]
+    medical_score = ibd_val + diab_val
+    lifestyle_idx = smok_val + alc_val + diet_map[diet_risk] + obesity_map[obesity] + activity_map[activity]
 
     input_df = pd.DataFrame([{
-        'Age': age, 'Gender': gen_val, 'Family_History': fam_val,
-        'Smoking_History': smok_val, 'Alcohol_Consumption': alc_val,
-        'Diabetes': diab_val, 'Inflammatory_Bowel_Disease': ibd_val,
-        'Genetic_Mutation': gene_val, 'Obesity_Risk_Level': obesity_map[obesity],
-        'Diet_Risk_Level': diet_map[diet_risk], 'Physical_Inactivity_Risk': activity_map[activity],
-        'Screening_History_Irregular': 1 if screening == "Irregular" else 0,
-        'Screening_History_Never':     1 if screening == "Never" else 0,
-        'Screening_History_Regular':   1 if screening == "Regular" else 0,
-        'Genetic_Age_Interaction': genetic_age_interaction,
-        'Medical_Comorbidity_Score': medical_score,
-        'Lifestyle_Index': lifestyle_idx
+        'Age':age,'Gender':gen_val,'Family_History':fam_val,
+        'Smoking_History':smok_val,'Alcohol_Consumption':alc_val,
+        'Diabetes':diab_val,'Inflammatory_Bowel_Disease':ibd_val,
+        'Genetic_Mutation':gene_val,'Obesity_Risk_Level':obesity_map[obesity],
+        'Diet_Risk_Level':diet_map[diet_risk],'Physical_Inactivity_Risk':activity_map[activity],
+        'Screening_History_Irregular':1 if screening=="Irregular" else 0,
+        'Screening_History_Never':    1 if screening=="Never"     else 0,
+        'Screening_History_Regular':  1 if screening=="Regular"   else 0,
+        'Genetic_Age_Interaction':genetic_age_interaction,
+        'Medical_Comorbidity_Score':medical_score,
+        'Lifestyle_Index':lifestyle_idx
     }])[FEATURE_COLS]
 
     prediction    = model.predict(input_df)[0]
     probabilities = model.predict_proba(input_df)[0]
-    classes = {0: "Low", 1: "Moderate", 2: "High"}
+    classes = {0:"Low", 1:"Moderate", 2:"High"}
     result  = classes[int(prediction)]
 
     # ── SHAP ──
@@ -417,12 +422,9 @@ if predict_btn:
             sv = np.array(shap_values[pred_class]).flatten()
         else:
             sv_arr = np.array(shap_values)
-            if sv_arr.ndim == 3:
-                sv = sv_arr[0, :, pred_class]
-            elif sv_arr.ndim == 2:
-                sv = sv_arr[0]
-            else:
-                sv = sv_arr.flatten()
+            if   sv_arr.ndim == 3: sv = sv_arr[0, :, pred_class]
+            elif sv_arr.ndim == 2: sv = sv_arr[0]
+            else:                  sv = sv_arr.flatten()
         sv = np.array(sv).flatten()
         if sv.shape[0] != len(FEATURE_COLS):
             raise ValueError(f"Shape mismatch: {sv.shape[0]} vs {len(FEATURE_COLS)}")
@@ -434,32 +436,32 @@ if predict_btn:
     st.divider()
     st.markdown('<div class="sec-label">Risk Assessment Result</div>', unsafe_allow_html=True)
 
-    # ── Result card + prob bars ──
     r1, r2 = st.columns([1, 1.4])
 
     with r1:
-        css   = result.lower()
-        icon  = "🔴" if result == "High" else ("🟡" if result == "Moderate" else "🟢")
-        conf  = np.max(probabilities) * 100
+        css  = result.lower()
+        icon = "🔴" if result=="High" else ("🟡" if result=="Moderate" else "🟢")
+        conf = np.max(probabilities)*100
         st.markdown(f"""
         <div class="result-box result-{css}">
           <div class="risk-badge badge-{css}">Predicted Risk Level</div><br>
           <div class="risk-num risk-num-{css}">{icon} {result}</div>
-          <div class="risk-conf">Model confidence: <strong>{conf:.1f}%</strong></div>
+          <div class="risk-conf" style="margin-top:0.4rem">
+            Model confidence: <strong style="color:#e2e8f4">{conf:.1f}%</strong>
+          </div>
         </div>""", unsafe_allow_html=True)
 
     with r2:
-        st.markdown('<div class="wcard">', unsafe_allow_html=True)
+        st.markdown('<div class="dcard">', unsafe_allow_html=True)
         st.markdown("**Class Probability Distribution**")
-        clr = {"Low": "#0a7a4e", "Moderate": "#d4860a", "High": "#c0392b"}
-        bg  = {"Low": "#6eddb8", "Moderate": "#ffd966", "High": "#ffb3b3"}
-        for label, prob in zip(["Low", "Moderate", "High"], probabilities):
-            pct = prob * 100
+        clr = {"Low":"#22c55e","Moderate":"#f59e0b","High":"#ef4444"}
+        for label, prob in zip(["Low","Moderate","High"], probabilities):
+            pct = prob*100
             st.markdown(f"""
             <div class="prob-row">
               <span class="prob-lbl">{label}</span>
               <div class="prob-track">
-                <div class="prob-fill" style="width:{pct:.1f}%;background:{bg[label]};"></div>
+                <div class="prob-fill" style="width:{pct:.1f}%;background:{clr[label]};"></div>
               </div>
               <span class="prob-pct" style="color:{clr[label]}">{pct:.1f}%</span>
             </div>""", unsafe_allow_html=True)
@@ -467,7 +469,10 @@ if predict_btn:
 
     # ── SHAP Chart ──
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown(f'<div class="sec-label">XAI Explanation <span class="shap-badge">SHAP · SHapley Additive exPlanations</span></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="sec-label">XAI Explanation'
+        f'<span class="shap-badge">SHAP · SHapley Additive exPlanations</span></div>',
+        unsafe_allow_html=True)
 
     if shap_ok:
         feat_labels = [FEATURE_LABELS.get(f, f) for f in FEATURE_COLS]
@@ -475,70 +480,75 @@ if predict_btn:
         shap_sorted = shap_s.reindex(shap_s.abs().sort_values(ascending=True).index).iloc[-12:]
 
         fig, ax = plt.subplots(figsize=(10, 5.2))
-        fig.patch.set_facecolor('#ffffff')
-        ax.set_facecolor('#f8faff')
+        fig.patch.set_facecolor('#0d1a30')
+        ax.set_facecolor('#0d1a30')
 
-        bar_clrs = ['#e74c3c' if v > 0 else '#0a7a4e' for v in shap_sorted.values]
+        bar_clrs = ['#ef4444' if v > 0 else '#22c55e' for v in shap_sorted.values]
         bars = ax.barh(shap_sorted.index, shap_sorted.values,
                        color=bar_clrs, height=0.58, edgecolor='none')
 
         for bar, val in zip(bars, shap_sorted.values):
-            x = val + (0.002 if val >= 0 else -0.002)
+            x  = val + (0.002 if val >= 0 else -0.002)
             ha = 'left' if val >= 0 else 'right'
-            ax.text(x, bar.get_y() + bar.get_height()/2,
+            ax.text(x, bar.get_y()+bar.get_height()/2,
                     f'{val:+.3f}', va='center', ha=ha,
-                    fontsize=8, color='#1a2540', fontfamily='monospace')
+                    fontsize=8, color='#cbd5e1', fontfamily='monospace')
 
-        ax.axvline(0, color=(0.2, 0.2, 0.2, 0.2), linewidth=0.9, linestyle='--')
+        ax.axvline(0, color=(1,1,1,0.15), linewidth=0.9, linestyle='--')
         ax.set_xlabel('SHAP Value  (impact on predicted risk class)',
-                      color='#6b7280', fontsize=9, labelpad=8)
-        ax.tick_params(axis='x', colors='#6b7280', labelsize=8)
-        ax.tick_params(axis='y', colors='#1a2540', labelsize=9)
-        for spine in ['top', 'right']:
-            ax.spines[spine].set_visible(False)
-        ax.spines['bottom'].set_color((0.8, 0.8, 0.9, 1.0))
-        ax.spines['left'].set_color((0.8, 0.8, 0.9, 1.0))
+                      color='#64748b', fontsize=9, labelpad=8)
+        ax.tick_params(axis='x', colors='#64748b', labelsize=8)
+        ax.tick_params(axis='y', colors='#cbd5e1', labelsize=9)
+        for sp in ['top','right']:
+            ax.spines[sp].set_visible(False)
+        ax.spines['bottom'].set_color((1,1,1,0.08))
+        ax.spines['left'].set_color((1,1,1,0.08))
 
-        p1 = mpatches.Patch(color='#e74c3c', label='↑ Increases risk')
-        p2 = mpatches.Patch(color='#0a7a4e', label='↓ Decreases risk')
-        ax.legend(handles=[p1, p2], loc='lower right', framealpha=0.8,
-                  labelcolor='#1a2540', fontsize=8)
+        p1 = mpatches.Patch(color='#ef4444', label='↑ Increases risk')
+        p2 = mpatches.Patch(color='#22c55e', label='↓ Decreases risk')
+        leg = ax.legend(handles=[p1, p2], loc='lower right',
+                        framealpha=0, fontsize=8)
+        for t in leg.get_texts(): t.set_color('#94a3b8')
+
         ax.set_title(f'Feature Contributions → Predicted: {result} Risk',
-                     color='#1a2540', fontsize=11, fontweight='700', pad=12, loc='left')
+                     color='#e2e8f4', fontsize=11, fontweight='700', pad=12, loc='left')
         plt.tight_layout()
         st.pyplot(fig, use_container_width=True)
         plt.close()
 
         # ── Pills ──
         st.markdown("<br>", unsafe_allow_html=True)
-        p1, p2 = st.columns(2)
+        p1c, p2c = st.columns(2)
         risk_f = shap_s[shap_s > 0].sort_values(ascending=False)
         prot_f = shap_s[shap_s < 0].sort_values(ascending=True)
 
-        with p1:
-            st.markdown('<div class="wcard">', unsafe_allow_html=True)
+        with p1c:
+            st.markdown('<div class="dcard">', unsafe_allow_html=True)
             st.markdown("**🔴 Risk-Increasing Factors**")
             if len(risk_f):
-                pills = "".join([f'<span class="pill pill-r">{f}  +{v:.3f}</span>'
+                pills = "".join([f'<span class="pill pill-r">{f} &nbsp;+{v:.3f}</span>'
                                  for f, v in risk_f.head(6).items()])
                 st.markdown(pills, unsafe_allow_html=True)
-                st.markdown(f"<br><small style='color:#6b7280'>These push the model toward <strong style='color:#c0392b'>{result}</strong> risk.</small>",
-                            unsafe_allow_html=True)
+                st.markdown(
+                    f"<br><small style='color:#64748b'>These push the model toward "
+                    f"<strong style='color:#ef4444'>{result}</strong> risk.</small>",
+                    unsafe_allow_html=True)
             else:
-                st.markdown("<small style='color:#6b7280'>None detected.</small>", unsafe_allow_html=True)
+                st.markdown("<small style='color:#64748b'>None detected.</small>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        with p2:
-            st.markdown('<div class="wcard">', unsafe_allow_html=True)
+        with p2c:
+            st.markdown('<div class="dcard">', unsafe_allow_html=True)
             st.markdown("**🟢 Risk-Protective Factors**")
             if len(prot_f):
-                pills = "".join([f'<span class="pill pill-g">{f}  {v:.3f}</span>'
+                pills = "".join([f'<span class="pill pill-g">{f} &nbsp;{v:.3f}</span>'
                                  for f, v in prot_f.head(6).items()])
                 st.markdown(pills, unsafe_allow_html=True)
-                st.markdown("<br><small style='color:#6b7280'>These lower the predicted risk level.</small>",
-                            unsafe_allow_html=True)
+                st.markdown(
+                    "<br><small style='color:#64748b'>These lower the predicted risk level.</small>",
+                    unsafe_allow_html=True)
             else:
-                st.markdown("<small style='color:#6b7280'>None detected.</small>", unsafe_allow_html=True)
+                st.markdown("<small style='color:#64748b'>None detected.</small>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
     else:
@@ -550,7 +560,7 @@ if predict_btn:
 
     interp = {
         "High": {
-            "summary": "This profile is associated with <strong>HIGH</strong> colorectal cancer risk.",
+            "summary": "This profile is associated with <strong style='color:#ef4444'>HIGH</strong> colorectal cancer risk.",
             "actions": [
                 "Immediate referral for colonoscopy is recommended.",
                 "Genetic counselling if mutation markers are present.",
@@ -559,7 +569,7 @@ if predict_btn:
             ]
         },
         "Moderate": {
-            "summary": "This profile is associated with <strong>MODERATE</strong> colorectal cancer risk.",
+            "summary": "This profile is associated with <strong style='color:#f59e0b'>MODERATE</strong> colorectal cancer risk.",
             "actions": [
                 "Schedule colonoscopy within 1–3 years.",
                 "Lifestyle modifications: diet, exercise, alcohol reduction.",
@@ -568,7 +578,7 @@ if predict_btn:
             ]
         },
         "Low": {
-            "summary": "This profile is associated with <strong>LOW</strong> colorectal cancer risk.",
+            "summary": "This profile is associated with <strong style='color:#22c55e'>LOW</strong> colorectal cancer risk.",
             "actions": [
                 "Continue regular screening per national guidelines.",
                 "Maintain healthy lifestyle: balanced diet and physical activity.",
@@ -577,13 +587,14 @@ if predict_btn:
             ]
         }
     }
-    info = interp[result]
-    items = "".join([f"<li style='margin-bottom:0.4rem;color:#4a5568'>{a}</li>" for a in info['actions']])
+    info  = interp[result]
+    items = "".join([f"<li style='margin-bottom:0.4rem;color:#94a3b8'>{a}</li>"
+                     for a in info['actions']])
     st.markdown(f"""
     <div class="clin-card">
-      <p style="font-size:0.92rem;margin-bottom:0.9rem;color:#1a2540">{info['summary']}</p>
-      <p style="font-size:0.7rem;font-family:'JetBrains Mono',monospace;color:#1a6fd4;
-         letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem">Recommended Actions</p>
+      <p style="font-size:0.92rem;margin-bottom:0.9rem">{info['summary']}</p>
+      <p style="font-size:0.68rem;font-family:'JetBrains Mono',monospace;color:#38bdf8;
+         letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.5rem">Recommended Actions</p>
       <ul style="padding-left:1.2rem;font-size:0.86rem">{items}</ul>
     </div>
     """, unsafe_allow_html=True)
@@ -593,7 +604,7 @@ if predict_btn:
       <strong>⚠️ Medical Disclaimer:</strong> This tool is developed for
       <strong>academic and research purposes only</strong>. It is not a substitute for
       professional medical diagnosis, advice, or treatment. All clinical decisions must be
-      made by a qualified healthcare professional. SHAP values represent feature contributions
-      to the model's prediction and do not imply direct medical causality.
+      made by a qualified healthcare professional. SHAP values represent model feature
+      contributions and do not imply direct medical causality.
     </div>
     """, unsafe_allow_html=True)
